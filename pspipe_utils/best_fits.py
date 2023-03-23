@@ -2,7 +2,7 @@
 Some utility functions for the generating best fit power spectrum.
 """
 import numpy as np
-from mflike import theoryforge_MFLike as th_mflike
+from mflike import theoryforge as th_mflike
 from pspy import so_spectra, pspy_utils
 
 def cmb_dict_from_file(f_name_cmb, lmax, spectra, lmin=2):
