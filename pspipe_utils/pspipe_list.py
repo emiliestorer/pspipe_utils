@@ -47,8 +47,14 @@ def get_spectra_list(dict):
                 arrays_2 = dict[f"arrays_{sv2}"]
                 for id_ar2, ar2 in enumerate(arrays_2):
                     # This ensures that we do not repeat redundant computations
-                    if  (id_sv1 == id_sv2) & (id_ar1 > id_ar2) : continue
-                    if  (id_sv1 > id_sv2) : continue
+                    if  (id_sv1 == id_sv2) & (id_ar1 > id_ar2) : 
+                       continue
+                    if  (id_sv1 > id_sv2) : 
+                        continue
+                    if  (sv1[-5:] == 'north') & (sv2[-5:] == 'south') : 
+                        continue
+                    if  (sv1[-5:] == 'south') & (sv2[-5:] == 'north') : 
+                        continue
                     sv1_list += [sv1]
                     ar1_list += [ar1]
                     sv2_list += [sv2]
@@ -118,6 +124,8 @@ def get_spec_name_list(dict, char="&", kind=None, freq_pair=None, remove_same_ar
                     # This ensures that we do not repeat redundant computations
                     if  (id_sv1 == id_sv2) & (id_ar1 > id_ar2) : continue
                     if  (id_sv1 > id_sv2) : continue
+                    if  (sv1[-5:] == 'north') & (sv2[-5:] == 'south') : continue
+                    if  (sv1[-5:] == 'south') & (sv2[-5:] == 'north') : continue
 
                     if (kind == "noise") or (kind == "auto"):
                         if (sv1 != sv2): continue
