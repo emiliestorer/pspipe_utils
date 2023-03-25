@@ -32,6 +32,8 @@ def read_cov_block_and_build_dict(spec_name_list,
     for sid1, name1 in enumerate(spec_name_list):
         for sid2, name2 in enumerate(spec_name_list):
             if sid1 > sid2: continue
+            if ('north' in name1) & ('south' in name2) : continue
+            if ('south' in name1) & ('north' in name2) : continue
             cov_block = np.load(f"{cov_dir}/{cov_type}_{name1}_{name2}.npy")
             n_bins = int(cov_block.shape[0] / len(spectra_order))
             for s1, spec1 in enumerate(spectra_order):
@@ -80,6 +82,8 @@ def cov_dict_to_full_cov(cov_dict,
     for sid1, name1 in enumerate(spec_name_list):
         for sid2, name2 in enumerate(spec_name_list):
             if sid1 > sid2: continue
+            if ('north' in name1) & ('south' in name2) : continue
+            if ('south' in name1) & ('north' in name2) : continue
             for s1, spec1 in enumerate(spectra_order):
                 for s2, spec2 in enumerate(spectra_order):
                     id_start_1 = sid1 * n_bins + s1 * n_cross * n_bins
@@ -188,6 +192,8 @@ def full_cov_to_cov_dict(full_cov,
     for sid1, name1 in enumerate(spec_name_list):
         for sid2, name2 in enumerate(spec_name_list):
             if sid1 > sid2: continue
+            if ('north' in name1) & ('south' in name2) : continue
+            if ('south' in name1) & ('north' in name2) : continue
             for s1, spec1 in enumerate(spectra_order):
                 for s2, spec2 in enumerate(spectra_order):
                     id_start_1 = sid1 * n_bins + s1 * n_cross * n_bins
@@ -230,6 +236,8 @@ def cov_dict_to_file(cov_dict,
     for sid1, name1 in enumerate(spec_name_list):
         for sid2, name2 in enumerate(spec_name_list):
             if sid1 > sid2: continue
+            if ('north' in name1) & ('south' in name2) : continue
+            if ('south' in name1) & ('north' in name2) : continue
 
             cov_block = np.zeros((n_spec * n_bins, n_spec * n_bins))
 
