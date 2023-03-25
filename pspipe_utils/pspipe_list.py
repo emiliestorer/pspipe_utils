@@ -47,14 +47,10 @@ def get_spectra_list(dict):
                 arrays_2 = dict[f"arrays_{sv2}"]
                 for id_ar2, ar2 in enumerate(arrays_2):
                     # This ensures that we do not repeat redundant computations
-                    if  (id_sv1 == id_sv2) & (id_ar1 > id_ar2) : 
-                       continue
-                    if  (id_sv1 > id_sv2) : 
-                        continue
-                    if  (sv1[-5:] == 'north') & (sv2[-5:] == 'south') : 
-                        continue
-                    if  (sv1[-5:] == 'south') & (sv2[-5:] == 'north') : 
-                        continue
+                    if  (id_sv1 == id_sv2) & (id_ar1 > id_ar2) : continue
+                    if  (id_sv1 > id_sv2) : continue
+                    if  ('north' in sv1) & ('south' in sv2) : continue
+                    if  ('south' in sv1) & ('north' in sv2) : continue
                     sv1_list += [sv1]
                     ar1_list += [ar1]
                     sv2_list += [sv2]
@@ -81,6 +77,8 @@ def get_covariances_list(dict):
     for sid1, spec1 in enumerate(spec_name):
         for sid2, spec2 in enumerate(spec_name):
             if sid1 > sid2: continue
+            if ('north' in spec1) & ('south' in spec2) : continue
+            if ('south' in spec1) & ('north' in spec2) : continue
             na, nb = spec1.split("x")
             nc, nd = spec2.split("x")
             na_list += [na]
@@ -124,8 +122,8 @@ def get_spec_name_list(dict, char="&", kind=None, freq_pair=None, remove_same_ar
                     # This ensures that we do not repeat redundant computations
                     if  (id_sv1 == id_sv2) & (id_ar1 > id_ar2) : continue
                     if  (id_sv1 > id_sv2) : continue
-                    if  (sv1[-5:] == 'north') & (sv2[-5:] == 'south') : continue
-                    if  (sv1[-5:] == 'south') & (sv2[-5:] == 'north') : continue
+                    if  ('north' in sv1) & ('south' in sv2) : continue
+                    if  ('south' in sv1) & ('north' in sv2) : continue
 
                     if (kind == "noise") or (kind == "auto"):
                         if (sv1 != sv2): continue
