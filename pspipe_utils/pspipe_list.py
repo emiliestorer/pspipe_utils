@@ -5,6 +5,7 @@ from itertools import combinations_with_replacement as cwr
 from itertools import product
 import numpy as np
 
+
 def get_arrays_list(dict):
     """This function creates the lists over which mpi is done
     when we parallelized over each arrays
@@ -172,6 +173,7 @@ def get_freq_list(dict):
 
 
 def x_ar_cov_order(spec_name_list,
+                   nu_tag_list,
                    spectra_order = ["TT", "TE", "ET", "EE"]):
 
     """This function creates the list of spectra that enters
@@ -189,11 +191,10 @@ def x_ar_cov_order(spec_name_list,
     """
     x_ar_list = []
     for spec in spectra_order:
-        for spec_name in spec_name_list:
-            print(spec_name)
+        for spec_name, nu_tag in zip(spec_name_list, nu_tag_list):
             na, nb = spec_name.split("x")
             if (spec == "ET" or spec == "BT" or spec == "BE") & (na == nb): continue
-            x_ar_list += [f"{spec}_{spec_name}"]
+            x_ar_list += [[spec, spec_name, nu_tag]]
 
     return x_ar_list
 
@@ -212,16 +213,87 @@ def x_freq_cov_order(freq_list,
     spectra_order: list of str
         the order of the spectra e.g  ["TT", "TE", "EE"]
     """
+    x_freq_list = []
+
     for spec in spectra_order:
         if spec in ["ET", "BT", "BE"]:
             raise ValueError("spectra_order can not contain [ET, BT, BE] the cross freq cov matrix convention is to assign all ET, BT, BE into TE,TB,EB")
 
-    x_freq_list = []
-
-    for spec in spectra_order:
         if spec[0] == spec[1]:
-            x_freq_list += [f"{spec}_{f0}x{f1}" for f0, f1 in cwr(freq_list, 2)]
+            x_freq_list += [[spec, (f0, f1)] for f0, f1 in cwr(freq_list, 2)]
         else:
-            x_freq_list +=  [f"{spec}_{f0}x{f1}" for f0, f1 in product(freq_list, freq_list)]
+            x_freq_list +=  [[spec, (f0, f1)] for f0, f1 in product(freq_list, freq_list)]
 
     return x_freq_list
+
+def final_cov_order(freq_list, spectra_order = ["TT", "TE", "EE"]):
+    
+    """This function creates the list of spectra that enters
+    the final covariance matrix.
+
+    Parameters
+    ----------
+    freq_list: list of str
+        the frequency we consider
+    spectra_order: list of str
+        the order of the spectra e.g  ["TT", "TE", "EE"]
+    """
+
+    final_list = []
+    for spec in spectra_order:
+        if spec in ["ET", "BT", "BE"]:
+            raise ValueError("spectra_order can not contain [ET, BT, BE] the final cov matrix convention is to assign all ET, BT, BE into TE, TB, EB")
+
+        if spec == "TT":
+            final_list += [[spec, (f0, f1)] for f0, f1 in cwr(freq_list, 2)]
+        else:
+            final_list += [[spec, None]]
+            
+    return  final_list
+
+
+def get_map_set_list(d):
+    """
+    construct a list of all map data sets specified in the dictionnary
+    a map set is for example: dr6_pa4_f150, planck_f143, etc
+    
+    Parameters
+    ----------
+    dict : dict
+        the global dictionnary file used in pspipe
+    """
+    
+    map_set_list = []
+    for sv in d["surveys"]:
+        for ar in d[f"arrays_{sv}"]:
+            map_set_list.append(f"{sv}_{ar}")
+    return map_set_list
+
+def get_null_list(d, spectra):
+
+    """
+    construct a list of all valid null test between the different map data set specified in the dictionnary
+    note that we exclude null test if they contains T at different frequency
+        
+    Parameters
+    ----------
+    dict : dict
+        the global dictionnary file used in pspipe
+    """
+    
+    map_set_list = get_map_set_list(d)
+    null_list = []
+    for i, (ms1, ms2) in enumerate(cwr(map_set_list, 2)):
+        for j, (ms3, ms4) in enumerate(cwr(map_set_list, 2)):
+
+            if j <= i: continue
+            f1, f2 = d[f"freq_info_{ms1}"]["freq_tag"], d[f"freq_info_{ms2}"]["freq_tag"]
+            f3, f4 = d[f"freq_info_{ms3}"]["freq_tag"], d[f"freq_info_{ms4}"]["freq_tag"]
+
+            for m in spectra:
+                m0, m1 = m[0], m[1]
+                if (f1 != f3) and (m0 == "T"): continue
+                if (f2 != f4) and (m1 == "T"): continue
+                null_list += [[m, ms1, ms2, ms3, ms4]]
+                    
+    return null_list

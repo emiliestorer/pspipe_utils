@@ -132,7 +132,7 @@ def build_analytic_kspace_filter_matrices(surveys, arrays, templates, filter_dic
     
     
 
-def deconvolve_kspace_filter_matrix(lb, ps, kspace_filter_matrix, spectra):
+def deconvolve_kspace_filter_matrix(lb, ps, kspace_filter_matrix, spectra, xtra_corr=None):
 
     """This function deconvolve the kspace filter transfer matrix
      
@@ -154,6 +154,10 @@ def deconvolve_kspace_filter_matrix(lb, ps, kspace_filter_matrix, spectra):
         a 9 * n_bins, 9 * n_bins matrix that encode the effect of the kspace filter
     spectra: list of str
         the spectra list ["TT","TE".....]
+    xtra_corr: a dictionnary with spectra
+        this term account for an xtra correction for the effect of kspace filter
+        in particular, tf_TE is not perfectly equal to sqrt(tf_TT * tf_EE)
+        so we might want to correct for this
     """
 
     n_bins = len(lb)
@@ -165,12 +169,15 @@ def deconvolve_kspace_filter_matrix(lb, ps, kspace_filter_matrix, spectra):
     vec = np.dot(inv_kspace_mat, vec)
     ps = so_spectra.vec2spec_dict(n_bins, vec, spectra)
 
+    if xtra_corr is not None:
+        for f in spectra:
+            ps[f] -= xtra_corr[f]
     return lb, ps
 
 
-def filter_map(map, filter, binary, inv_pixwin=None, weighted_filter=False, tol=1e-4, ref=0.9):
+def filter_map(map, filter, window, inv_pixwin=None, weighted_filter=False, tol=1e-4, ref=0.9, use_ducc_rfft=False):
 
-    """Filter the map in Fourier space using a predefined filter. Note that we mutliply the maps by a binary mask before
+    """Filter the map in Fourier space using a predefined filter. Note that we mutliply the maps by a window  before
     doing this operation in order to remove pathological pixels
     We also include an option for removing the pixel window function
 
@@ -180,9 +187,8 @@ def filter_map(map, filter, binary, inv_pixwin=None, weighted_filter=False, tol=
         the map to be filtered
     filter: 2d array
         a filter applied in fourier space
-    binary:  ``so_map``
-        a binary mask removing pathological pixels
-
+    window:  ``so_map``
+        a window removing pathological pixels
     inv_pixwin: 2d array
         the inverse of the pixel window function in fourier space
     weighted_filter: boolean
@@ -190,22 +196,27 @@ def filter_map(map, filter, binary, inv_pixwin=None, weighted_filter=False, tol=
     tol, ref: floats
         only in use in the case of the weighted filter, these arg
         remove crazy pixels value in the weight applied
+    use_ducc_rfft: boolean
+        wether to use ducc real fft instead of enmap complex fft
 
     """
 
     if weighted_filter == False:
         if inv_pixwin is not None:
-            map = so_map.fourier_convolution(map, filter * inv_pixwin, binary)
+            map = so_map.fourier_convolution(map, filter * inv_pixwin, window, use_ducc_rfft=use_ducc_rfft)
         else:
-            map = so_map.fourier_convolution(map, filter, binary)
+            map = so_map.fourier_convolution(map, filter, window, use_ducc_rfft=use_ducc_rfft)
 
     else:
-        map.data *= binary.data
+    
+        if use_ducc_rfft == True:
+            print("ducc fft not implemented for weighted filter")
+        map.data *= window.data
         one_mf = (1 - filter)
         rhs    = enmap.ifft(one_mf * enmap.fft(map.data, normalize=True), normalize=True).real
-        div    = enmap.ifft(one_mf * enmap.fft(binary.data, normalize=True), normalize=True).real
+        div    = enmap.ifft(one_mf * enmap.fft(window.data, normalize=True), normalize=True).real
         del one_mf
-        div    = np.maximum(div, np.percentile(binary.data[::10, ::10], ref * 100) * tol)
+        div    = np.maximum(div, np.percentile(window.data[::10, ::10], ref * 100) * tol)
         map.data -= rhs / div
         del rhs
         del div
@@ -218,7 +229,7 @@ def filter_map(map, filter, binary, inv_pixwin=None, weighted_filter=False, tol=
     return map
 
 
-def get_kspace_filter(template, filter_dict):
+def get_kspace_filter(template, filter_dict, dtype=np.float64):
 
     """build the kspace filter according to a dictionnary specifying the filter parameters
     Parameters
@@ -233,9 +244,9 @@ def get_kspace_filter(template, filter_dict):
 
     shape, wcs = template.data.shape, template.data.wcs
     if filter_dict["type"] == "binary_cross":
-        filter = so_map_preprocessing.build_std_filter(shape, wcs, vk_mask=filter_dict["vk_mask"], hk_mask=filter_dict["hk_mask"], dtype=np.float64)
+        filter = so_map_preprocessing.build_std_filter(shape, wcs, vk_mask=filter_dict["vk_mask"], hk_mask=filter_dict["hk_mask"], dtype=dtype)
     elif filter_dict["type"] == "gauss":
-        filter = so_map_preprocessing.build_sigurd_filter(shape, wcs, filter_dict["lbounds"], dtype=np.float64)
+        filter = so_map_preprocessing.build_sigurd_filter(shape, wcs, filter_dict["lbounds"], dtype=dtype)
     else:
         print("you need to specify a valid filter type")
 
